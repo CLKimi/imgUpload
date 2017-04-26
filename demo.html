@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="description" content="网站描述"/>
+    <link rel="icon" type="image/png" href="#">
+    <link rel="stylesheet" href="build/imageUpload.css"/>
+    <title>图片上传</title>
+</head>
+<body>
+<div>
+    <button class="m-btn j-openLayer">点击选择地区</button>
+</div>
+
+<script type="text/html" id="template">
+    <div class="m-layer-uploadImg">
+        <div class="u-mainContent">
+            <div class="u-left-group j-changeGroup">
+                <ul>
+                    <li class="active">全部图片<em>(85)</em></li>
+                    <li>未分组<em>(84)</em></li>
+                    <li>微信小店<em>(0)</em></li>
+                    <li>文章配图<em>(1)</em></li>
+                </ul>
+            </div>
+            <div class="u-right-imgBox">
+                <p class="u-imageBox-head">
+                    <em>大小不超过5M，已开启图片水印</em><input id="file-upload" type="file" name="file" class="layui-upload-file">
+                </p>
+                <div class="u-imageBox-image">
+                    <ul id="imageList">
+                        <li v-for="item in data" v-bind:imageId="item.id" class="j-selected">
+                            <img v-bind:src="item.url" alt="">
+                            <img src="images/i-select.png" class="z-select">
+                            <span>xxxxxxxx</span>
+                        </li>
+                    </ul>
+                </div>
+                <p class="m-customPages">
+                    <button class="u-page-toLeft"></button>
+                    <span class="u-pageNum"><em class="z-now">1</em>/<em class="z-all">99</em></span>
+                    <button class="u-page-toRight"></button>
+                    <input placeholder="" type="text" class="u-inputNum" onkeyup="this.value=this.value.replace(/\D/g,'')" onafterpaste="this.value=this.value.replace(/\D/g,'')">
+                    <button class="u-page-initDone">跳转</button>
+                </p>
+            </div>
+        </div>
+        <p class="u-image-option">
+            <button class="u-sure">确定</button>
+            <button class="u-cancel j-cancel">取消</button>
+            <span class="u-totalSelect">已选<em class="z-selectNum">0</em>个，可选<em class="z-totalSelect">3</em>个</span>
+        </p>
+    </div>
+</script>
+
+<script type="text/javascript" src="build/imageUpload.js" charset="utf-8"></script>
+<script>
+    var pageNum=1;
+
+    $('.j-openLayer').click(function () {
+        var temp=$('#template').html();
+
+        layui.use('layer', function(){
+            layer.open({
+                type: 1,
+                title: '选择图片',
+                closeBtn: 1,
+                shadeClose: false,
+                area: ['1020px', 'auto'],
+                content: temp,
+                success: function () {
+                    var totalPage=$('.z-all').text();
+                    $('.j-cancel').click(function () {
+                        layer.closeAll();
+                    });
+                    $('.u-page-toLeft').hide();
+                    pageNum=1;
+                    var imageList = new Vue({
+                        el: '#imageList',
+                        data: {
+                            data: ''
+                        }
+                    });
+                    askImageData(pageNum,imageList);
+
+                    //向前翻页
+                    $('.u-page-toLeft').click(function () {
+                        pageNum--;
+                        askImageData(pageNum,imageList);
+                    });
+                    //向后翻页
+                    $('.u-page-toRight').click(function () {
+                        if(pageNum >= totalPage){
+                            layer.msg('已经是最后一页');
+                        }else{
+                            pageNum++;
+                            askImageData(pageNum,imageList);
+                        }
+                    });
+                    //目标页
+                    $('.u-page-initDone').click(function () {
+                        pageNum=$('.u-inputNum').val();
+                        if(pageNum>totalPage){
+                            layer.msg('输入的页数有误');
+                        }else{
+                            askImageData(pageNum,imageList);
+                        }
+                    });
+                    layui.use('upload', function(){
+                        layui.upload({
+                            url: 'http://csc.nhsoft.cn/pictures?type=test'
+                            ,elem: '#file-upload' //指定原始元素，默认直接查找class="layui-upload-file"
+                            ,method: 'post' //上传接口的http类型
+                            ,success: function(res){
+                                console.log(res);
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    });
+
+    //请求图片数据
+    function askImageData(num,model) {
+        $('.z-now').text(num);
+        $('.j-selected').removeClass('selected');
+        if(num>1){
+            $('.u-page-toLeft').show();
+        }
+        if(num==1){
+            $('.u-page-toLeft').hide();
+        }
+        $.ajax({
+            type: "get",
+            url: "http://csc.nhsoft.cn/pictures/list.json",
+            data:{
+                page:num
+            },
+            dataType: "json",
+            success: function (json) {
+                model.data=json.data;
+            },
+            error: function () {
+            }
+        });
+    }
+    //已选数
+    function selectSum() {
+        var num=0;
+        $('.j-selected').each(function () {
+            if($(this).hasClass('selected')){
+                num++;
+            }
+        });
+        $('.z-selectNum').text(num);
+    }
+
+    //左侧分组
+    $(document).on('click', '.j-changeGroup li', function () {
+        $('.j-changeGroup li').removeClass('active');
+        $(this).addClass('active');
+    });
+    //图片选中
+    $(document).on('click', '.j-selected', function () {
+        if($(this).hasClass('selected')){
+            $(this).removeClass('selected')
+        }else{
+            var total=$('.z-totalSelect').text();
+            var num=0;
+            $('.j-selected').each(function () {
+                if($(this).hasClass('selected')){
+                    num++;
+                }
+            });
+            if(num<total){
+                $(this).toggleClass('selected');
+                selectSum();
+            }
+        }
+    });
+
+
+</script>
+</body>
+</html>
